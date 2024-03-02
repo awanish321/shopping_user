@@ -14,7 +14,6 @@ class EmptyWishlistScreen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 70),
         child: Column(
-          // mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Lottie.asset('assets/images/favourites.json',height: 250),
             const Gap(20),
@@ -31,7 +30,6 @@ class EmptyWishlistScreen extends StatelessWidget {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
                   }, child: Text("Add Items", style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
             )
-
           ],
         ),
       ),

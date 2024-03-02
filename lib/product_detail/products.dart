@@ -35,8 +35,6 @@ class SelectedProductDetails {
   });
 }
 
-
-
 class ProductDetailsScreen extends StatefulWidget {
   final ProductModel product;
 
@@ -86,7 +84,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       // Add the cart item to the user's cart collection
       collectionRef.doc(currentUser!.email).collection('items').add(cartItemData)
           .then((value) {
-        print('Added to cart');
+        debugPrint('Added to cart');
 
 
         final snackBar = SnackBar(
@@ -99,7 +97,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             title: 'Congratulations',
             message: ('${widget.product.productName} Added to the cart.'),
 
-            /// change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
+            // / change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
             contentType: ContentType.success,
 
           ),
@@ -121,49 +119,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       if (kDebugMode) {
         print('Error: Some necessary fields are missing.');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: Some necessary fields are missing.')),
+          const SnackBar(content: Text('Error: Some necessary fields are missing.')),
         );
       }
     }
   }
 
-  // Future<void> addToFavourite() async {
-  //   final FirebaseAuth auth = FirebaseAuth.instance;
-  //   var currentUser = auth.currentUser;
-  //   CollectionReference collectionRef =
-  //   FirebaseFirestore.instance.collection('Wishlist');
-  //
-  //   var product = widget.product;
-  //
-  //   // Get the first image
-  //   String firstImage =
-  //   product.images.isNotEmpty ? product.images.first : '';
-  //
-  //   // Build the cart item data
-  //   Map<String, dynamic> favouriteItemData = {
-  //     'image': firstImage,
-  //     'productName': product.productName,
-  //     'productTitle': product.productTitle,
-  //     'productPrice': product.productPrice,
-  //   };
-  //
-  //   // Toggle the _isFavorite variable
-  //   setState(() {
-  //     _isFavorite = !_isFavorite;
-  //   });
-  //
-  //
-  //   // Check if all necessary fields are present
-  //   if (firstImage.isNotEmpty) {
-  //     // Add the cart item to the user's cart collection
-  //     return collectionRef
-  //         .doc(currentUser!.email)
-  //         .collection('items')
-  //         .add(favouriteItemData)
-  //         .then((value) => debugPrint('Added to wishlist'))
-  //         .catchError((error) => debugPrint('Error adding to wishlist: $error'));
-  //   }
-  // }
 
   Future<void> addToFavourite(BuildContext context) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
@@ -198,7 +159,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           .collection('items')
           .add(favouriteItemData)
           .then((value) {
-        // Show snackbar when item is added to wishlist
+        // Show snack-bar when item is added to wishlist
         final snackBar = SnackBar(
 
           /// need to set following properties for best effect of awesome_snackbar_content

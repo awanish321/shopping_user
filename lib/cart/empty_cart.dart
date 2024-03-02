@@ -11,7 +11,7 @@ class EmptyCartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 130),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 170),
         child: Column(
           children: [
             Lottie.asset('assets/cart.json',),
@@ -19,7 +19,7 @@ class EmptyCartScreen extends StatelessWidget {
             Text("Your Cart is Empty", style: GoogleFonts.nunitoSans(fontSize: 30, fontWeight: FontWeight.bold),textAlign: TextAlign.center,),
             const Gap(10),
             Text("Look's like you haven't \n added items in your cart yet.", style: GoogleFonts.nunitoSans(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),textAlign: TextAlign.center,),
-            const Gap(45),
+            const Gap(50),
             SizedBox(
               height: 50,
               width: 260,
@@ -27,7 +27,7 @@ class EmptyCartScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrangeAccent),
                   onPressed: (){
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
-                  }, child: Text("Add Items", style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
+                  }, child: Text("Add Item", style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
             )
 
           ],

@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:shopping_app/home/components/store.dart';
+import 'package:shopping_app/orders/orders.dart';
 import 'package:shopping_app/wishlist/wishlist.dart';
 import 'package:shopping_app/home/home_screen.dart';
 import 'package:shopping_app/screens/profile/profile_screen.dart';
-
-import '../../models/p_products.dart';
 
 class MyBottomNavBar extends StatefulWidget {
   const MyBottomNavBar({Key? key}) : super(key: key);
@@ -17,17 +15,20 @@ class MyBottomNavBar extends StatefulWidget {
 
 class _MyBottomNavBarState extends State<MyBottomNavBar> {
   int myCurrentIndex = 0;
-  late List pages;
+  late List<Widget> pages; // Declare the type explicitly
 
-  @override
-  Widget build(BuildContext context) {
+  // Initialize the pages variable in the constructor
+  _MyBottomNavBarState() {
     pages = [
       const HomeScreen(),
-      const Store(),
+      const EmptyOrderScreen(),
       const WishlistScreen(),
       const ProfileScreen(),
     ];
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFF8A80),
       extendBody: true,
@@ -59,7 +60,7 @@ class _MyBottomNavBarState extends State<MyBottomNavBar> {
               ),
               BottomNavigationBarItem(
                 icon: Icon(Iconsax.shopping_bag),
-                label: "Order",
+                label: "Orders",
               ),
               BottomNavigationBarItem(
                 icon: Icon(Iconsax.heart),
