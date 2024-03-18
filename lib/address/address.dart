@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:shopping_app/address/widgets/empty_address_screen.dart';
 import 'package:shopping_app/address/widgets/single_address.dart';
 import 'package:shopping_app/address/add_new_address.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:iconsax/iconsax.dart';
 
-import 'model/address_model.dart';
 
 class UserAddressScreen extends StatelessWidget {
   const UserAddressScreen({super.key});
@@ -18,7 +17,7 @@ class UserAddressScreen extends StatelessWidget {
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFE53935),
+        backgroundColor: Colors.deepOrangeAccent,
         onPressed: () {
           Navigator.push(
             context,
@@ -33,9 +32,9 @@ class UserAddressScreen extends StatelessWidget {
         ),
       ),
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Addresses',
-          style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -58,12 +57,7 @@ class UserAddressScreen extends StatelessWidget {
           if (snapshot.hasData) {
             final addresses = snapshot.data!.docs;
             if (addresses.isEmpty) {
-              return Center(
-                child: Text(
-                  'No addresses found.',
-                  style: GoogleFonts.nunitoSans(),
-                ),
-              );
+              return const EmptyAddressScreen();
             }
             return SingleChildScrollView(
               child: Padding(

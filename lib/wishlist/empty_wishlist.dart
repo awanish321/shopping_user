@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-
 import '../home/home_screen.dart';
 
 class EmptyWishlistScreen extends StatelessWidget {
@@ -17,9 +15,9 @@ class EmptyWishlistScreen extends StatelessWidget {
           children: [
             Lottie.asset('assets/images/favourites.json',height: 250),
             const Gap(20),
-            Text("Your Wishlist is Empty!", style: GoogleFonts.nunitoSans(fontSize: 30, fontWeight: FontWeight.bold),textAlign: TextAlign.center,),
+            const Text("Your Wishlist is Empty!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),textAlign: TextAlign.center,),
             const Gap(10),
-            Text("Explore more and \n shortlist some items and add them to your wishlist.", style: GoogleFonts.nunitoSans(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),textAlign: TextAlign.center,),
+            const Text("Explore more and \n shortlist some items and add them to your wishlist.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),textAlign: TextAlign.center,),
             const Gap(45),
             SizedBox(
               height: 50,
@@ -28,7 +26,7 @@ class EmptyWishlistScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrangeAccent),
                   onPressed: (){
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
-                  }, child: Text("Add Items", style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
+                  }, child: const Text("Add Items", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
             )
           ],
         ),

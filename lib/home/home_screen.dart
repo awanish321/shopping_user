@@ -147,11 +147,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:shopping_app/home/components/search_field.dart';
 import 'package:shopping_app/models/user_model.dart';
-import 'package:shopping_app/screens/profile/components/notifications_screen.dart';
 import '../cart/cart.dart';
+import '../screens/profile/components/notifications/empty_notifications_screen.dart';
 import 'components/categories.dart';
 import 'components/icon_btn_with_counter.dart';
 import 'components/popular_product.dart';
@@ -165,13 +164,13 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  UserModel? _user; // Variable to hold the user data
+  UserModel? _user;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _getUserData(); // Fetch user data when the screen initializes
+    _getUserData();
   }
 
   // Method to fetch user data from FireStore
@@ -181,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
       DocumentSnapshot<Map<String, dynamic>> userSnapshot =
       await FirebaseFirestore.instance.collection('users').doc(userId).get();
       setState(() {
-        _user = UserModel.fromSnapshot(userSnapshot); // Update the user data
+        _user = UserModel.fromSnapshot(userSnapshot);
         _isLoading = false;
       });
     } catch (error) {
@@ -209,20 +208,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Good day for shopping',
-                        style: GoogleFonts.nunitoSans(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Colors.black,
+                          fontSize: 16,
                         ),
                       ),
                       Text(
                         _user != null ? '${_user!.firstName} ${_user!.lastName}' : 'Loading...',
-                        style: GoogleFonts.nunitoSans(
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
                         ),
                       ),
                     ],
@@ -267,9 +264,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            const SpecialOffers(),
-            const SizedBox(height: 20),
             const Categories(),
+            const SizedBox(height: 20),
+            const SpecialOffers(),
             const SizedBox(height: 15),
             const PopularProducts(),
             const SizedBox(height: 20),

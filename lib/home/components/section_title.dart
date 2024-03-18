@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class SectionTitle extends StatelessWidget {
   const SectionTitle({
@@ -18,13 +17,12 @@ class SectionTitle extends StatelessWidget {
       children: [
         Text(
           title,
-            style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
         ),
         TextButton(
           onPressed: press,
           style: TextButton.styleFrom(foregroundColor: Colors.grey),
-          child: Text("See more", style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontWeight: FontWeight.bold)),),
-        ),
+          child: const Text("See more", style: TextStyle(fontSize: 14)),),
       ],
     );
   }

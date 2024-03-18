@@ -2,10 +2,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:shopping_app/home/components/coustom_bottom_nav_bar.dart';
 import 'package:shopping_app/screens/signin_screen.dart';
+import 'package:twitter_login/twitter_login.dart';
 import '../home/home_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -23,8 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sign Up', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontWeight: FontWeight.bold)),),
-        centerTitle: true,
+        // title: Text('Sign Up', style: TextStyle(fontWeight: FontWeight.bold)),), centerTitle: true,
       ),
       resizeToAvoidBottomInset: true,
       body: Padding(
@@ -32,16 +34,14 @@ class _SignupScreenState extends State<SignupScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              Text(
+              const Text(
                 "Register Account",
-                style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-              ),
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              Text(
+              const Text(
                 "Complete your details or continue \nwith social media",
                 textAlign: TextAlign.center,
-                style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, color: Colors.grey)),
-              ),
+                style: TextStyle(fontSize: 15, color: Colors.grey)),
               SignupForm(auth: _auth, firestore: _firestore),
             ],
           ),
@@ -58,7 +58,7 @@ class SignupForm extends StatefulWidget {
   const SignupForm({super.key, required this.auth, required this.firestore});
 
   @override
-  _SignupFormState createState() => _SignupFormState();
+  State<SignupForm> createState() => _SignupFormState();
 }
 
 class _SignupFormState extends State<SignupForm> {
@@ -72,6 +72,88 @@ class _SignupFormState extends State<SignupForm> {
   final _usernameController = TextEditingController();
   final _genderController = TextEditingController();
   final _dobController = TextEditingController();
+  bool _obscureText = true;
+  bool _obscureText1 = true;
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FacebookAuth _facebookAuth = FacebookAuth.instance;
+  final TwitterLogin _twitterLogin = TwitterLogin(
+    apiKey: 'YOUR_TWITTER_API_KEY',
+    apiSecretKey: 'YOUR_TWITTER_API_SECRET_KEY',
+    redirectURI: 'YOUR_TWITTER_REDIRECT_URI',
+  );
+
+
+
+  Future<void> _signInWithGoogle() async {
+    try {
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser != null) {
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        final userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        debugPrint('User signed in: ${userCredential.user!.uid}');
+        // _rememberUser();
+        // _saveUserToFirestore(userCredential.user!);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error signing in with Google: $e');
+    }
+  }
+
+
+  Future<void> _signInWithFacebook() async {
+    try {
+      final result = await _facebookAuth.login();
+      if (result.status == LoginStatus.success) {
+        final accessToken = result.accessToken!.token;
+        final credential = FacebookAuthProvider.credential(accessToken);
+        final userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        debugPrint('User signed in: ${userCredential.user!.uid}');
+        // _rememberUser();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error signing in with Facebook: $e');
+    }
+  }
+
+  Future<void> _signInWithTwitter() async {
+    try {
+      final twitterLogin = await _twitterLogin.loginV2();
+      if (twitterLogin.status == TwitterLoginStatus.loggedIn) {
+        final credential = TwitterAuthProvider.credential(
+          accessToken: twitterLogin.authToken!,
+          secret: twitterLogin.authTokenSecret!,
+        );
+        final userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
+        debugPrint('User signed in: ${userCredential.user!.uid}');
+        // _rememberUser();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error signing in with Twitter: $e');
+    }
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -88,17 +170,20 @@ class _SignupFormState extends State<SignupForm> {
                     controller: _firstNameController,
                     decoration: InputDecoration(
                       labelText: 'First Name',
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       hintText: 'Enter your first name',
                       suffixIcon: const Icon(Iconsax.user),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your first name';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 8,),
@@ -106,18 +191,21 @@ class _SignupFormState extends State<SignupForm> {
                   child: TextFormField(
                     controller: _lastNameController,
                     decoration: InputDecoration(
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       labelText: 'Last Name',
                       hintText: 'Enter your last name',
                       suffixIcon: const Icon(Iconsax.user),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your last name';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -130,18 +218,21 @@ class _SignupFormState extends State<SignupForm> {
                   child: TextFormField(
                     controller: _usernameController,
                     decoration: InputDecoration(
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       labelText: 'Username',
                       hintText: 'Enter your username',
                       suffixIcon: const Icon(Iconsax.user),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your username';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 8,),
@@ -149,18 +240,21 @@ class _SignupFormState extends State<SignupForm> {
                   child: TextFormField(
                     controller: _phoneNumberController,
                     decoration: InputDecoration(
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       labelText: 'Phone Number',
                       hintText: 'Enter your phone number',
                       suffixIcon: const Icon(Iconsax.call),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your phone number';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -172,18 +266,21 @@ class _SignupFormState extends State<SignupForm> {
                   child: TextFormField(
                     controller: _genderController,
                     decoration: InputDecoration(
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       labelText: 'Gender',
                       hintText: 'Enter your gender',
                       suffixIcon: const Icon(Iconsax.man),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your gender';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 const SizedBox(width: 8,),
@@ -191,18 +288,21 @@ class _SignupFormState extends State<SignupForm> {
                   child: TextFormField(
                     controller: _dobController,
                     decoration: InputDecoration(
-                      labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                      hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                      labelStyle: const TextStyle(fontSize: 15),
+                      hintStyle: const TextStyle(fontSize: 15),
                       labelText: 'Date of Birth',
                       hintText: 'Enter your date of birth',
                       suffixIcon: const Icon(Iconsax.edit),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
                     ),
+                    validator: (value){
+                      if(value == null || value.isEmpty){
+                        return 'Enter your date of birth';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -211,15 +311,12 @@ class _SignupFormState extends State<SignupForm> {
             TextFormField(
               controller: _emailController,
               decoration: InputDecoration(
-                labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                labelStyle: const TextStyle(fontSize: 15),
+                hintStyle: const TextStyle(fontSize: 15),
                 labelText: 'E-mail',
                 hintText: 'Enter your email',
                 suffixIcon: const Icon(Iconsax.sms),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -234,17 +331,24 @@ class _SignupFormState extends State<SignupForm> {
             const SizedBox(height: 20),
             TextFormField(
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _obscureText,
               decoration: InputDecoration(
-                labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                labelStyle: const TextStyle(fontSize: 15),
+                hintStyle: const TextStyle(fontSize: 15),
                 labelText: 'Password',
                 hintText: 'Enter your password',
-                suffixIcon: const Icon(Iconsax.lock),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    color: Colors.grey,
+                    _obscureText ? Iconsax.eye_slash : Iconsax.eye,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
                 ),
-                focusedBorder: OutlineInputBorder(
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -258,17 +362,24 @@ class _SignupFormState extends State<SignupForm> {
             const SizedBox(height: 20),
             TextFormField(
               controller: _confirmPasswordController,
-              obscureText: true,
+              obscureText: _obscureText1,
               decoration: InputDecoration(
-                labelStyle: GoogleFonts.nunitoSans(fontSize: 15),
-                hintStyle: GoogleFonts.nunitoSans(fontSize: 15),
+                labelStyle: const TextStyle(fontSize: 15),
+                hintStyle: const TextStyle(fontSize: 15),
                 labelText: 'Confirm Password',
                 hintText: 'Re-enter your password',
-                suffixIcon: const Icon(Iconsax.lock),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    color: Colors.grey,
+                    _obscureText1 ? Iconsax.eye_slash : Iconsax.eye,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText1 = !_obscureText1;
+                    });
+                  },
                 ),
-                focusedBorder: OutlineInputBorder(
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -297,16 +408,14 @@ class _SignupFormState extends State<SignupForm> {
                   ),
                 ),
                 onPressed: _registerUser,
-                child: Text(
+                child: const Text(
                   'SIGN UP',
-                  style: GoogleFonts.nunitoSans(
-                      textStyle: const TextStyle(
+                  style: TextStyle(
                           fontSize: 15,
                           color: Colors.white,
                           fontWeight: FontWeight.bold)),
                 ),
               ),
-            ),
 
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 30),
@@ -319,7 +428,7 @@ class _SignupFormState extends State<SignupForm> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: _signInWithGoogle,
                       icon: SvgPicture.asset(
                         "assets/icons/google-icon.svg",
                         height: 25,
@@ -334,7 +443,7 @@ class _SignupFormState extends State<SignupForm> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: _signInWithFacebook,
                       icon: SvgPicture.asset(
                         "assets/icons/facebook-2.svg",
                         height: 25,
@@ -349,7 +458,7 @@ class _SignupFormState extends State<SignupForm> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: _signInWithTwitter,
                       icon: SvgPicture.asset(
                         "assets/icons/twitter.svg",
                         height: 25,
@@ -363,24 +472,22 @@ class _SignupFormState extends State<SignupForm> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   "Already have an account!",
-                  style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, color: Colors.grey)),
-                ),
+                  style: TextStyle(fontSize: 15, color: Colors.grey)),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SigninScreen(),
+                        builder: (context) => const SignInScreen(),
                       ),
                     );
                   },
-                  child: Text(
+                  child: const Text(
                       'Sign In',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
                   ),
-                ),
               ],
             )
           ],
@@ -388,8 +495,6 @@ class _SignupFormState extends State<SignupForm> {
       ),
     );
   }
-
-
 
   void _registerUser() async {
     if (_formKey.currentState!.validate()) {
@@ -429,7 +534,7 @@ class _SignupFormState extends State<SignupForm> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const HomeScreen(), // Your home screen widget
+            builder: (context) => const BottomNavBar(),
           ),
         );
       } catch (e) {

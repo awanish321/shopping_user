@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:shopping_app/orders/orders.dart';
+import 'package:shopping_app/orders/orders_screen.dart';
 import 'package:shopping_app/wishlist/wishlist.dart';
 import 'package:shopping_app/home/home_screen.dart';
 import 'package:shopping_app/screens/profile/profile_screen.dart';
 
-class MyBottomNavBar extends StatefulWidget {
-  const MyBottomNavBar({Key? key}) : super(key: key);
+class BottomNavBar extends StatefulWidget {
+  const BottomNavBar({Key? key}) : super(key: key);
 
   @override
-  State<MyBottomNavBar> createState() => _MyBottomNavBarState();
+  State<BottomNavBar> createState() => _BottomNavBarState();
 }
 
-class _MyBottomNavBarState extends State<MyBottomNavBar> {
+class _BottomNavBarState extends State<BottomNavBar> {
   int myCurrentIndex = 0;
-  late List<Widget> pages; // Declare the type explicitly
+  late List<Widget> pages;
 
-  // Initialize the pages variable in the constructor
-  _MyBottomNavBarState() {
+  _BottomNavBarState() {
     pages = [
       const HomeScreen(),
-      const EmptyOrderScreen(),
+      const OrdersScreen(),
       const WishlistScreen(),
       const ProfileScreen(),
     ];
@@ -30,7 +28,6 @@ class _MyBottomNavBarState extends State<MyBottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFF8A80),
       extendBody: true,
       bottomNavigationBar: SizedBox(
         height: 70,
@@ -41,18 +38,15 @@ class _MyBottomNavBarState extends State<MyBottomNavBar> {
           ),
           child: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
-            selectedItemColor: Colors.redAccent,
-            unselectedItemColor: Colors.black,
-            selectedLabelStyle: GoogleFonts.nunitoSans(),
-            unselectedLabelStyle: GoogleFonts.nunitoSans(),
+            selectedItemColor: Colors.deepOrangeAccent,
             currentIndex: myCurrentIndex,
             onTap: (index) {
               setState(() {
                 myCurrentIndex = index;
               });
             },
-            selectedFontSize: 13,
-            unselectedFontSize: 13,
+            selectedFontSize: 12,
+            unselectedFontSize: 12,
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Iconsax.home),

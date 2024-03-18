@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shopping_app/home/home_screen.dart';
 
@@ -11,14 +10,15 @@ class EmptyCartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 170),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 100),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Lottie.asset('assets/cart.json',),
+            Lottie.asset('assets/em_car.json',),
             const Gap(20),
-            Text("Your Cart is Empty", style: GoogleFonts.nunitoSans(fontSize: 30, fontWeight: FontWeight.bold),textAlign: TextAlign.center,),
+            const Text("Your Cart is Empty", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),textAlign: TextAlign.center,),
             const Gap(10),
-            Text("Look's like you haven't \n added items in your cart yet.", style: GoogleFonts.nunitoSans(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),textAlign: TextAlign.center,),
+            const Text("Look's like you haven't \n added items in your cart yet.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),textAlign: TextAlign.center,),
             const Gap(50),
             SizedBox(
               height: 50,
@@ -27,9 +27,8 @@ class EmptyCartScreen extends StatelessWidget {
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrangeAccent),
                   onPressed: (){
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const HomeScreen()));
-                  }, child: Text("Add Item", style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
+                  }, child: const Text("Add Item", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),)),
             )
-
           ],
         ),
       ),

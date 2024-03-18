@@ -37,35 +37,6 @@ class UserModel{
     };
   }
 
-  // factory UserModel.fromSnapshot(DocumentSnapshot<Map<String, dynamic>> document){
-  //   final data = document.data()!;
-  //   return UserModel(
-  //       id: document.id,
-  //       firstName: data['firstName'] ?? '',
-  //       lastName: data['lastName'] ?? '',
-  //       phoneNumber: data['phoneNumber'] ?? '',
-  //       dob: data['dob'] ?? '',
-  //       gender: data['gender'] ?? '',
-  //       email: data['email'] ?? '',
-  //       userName: data['username'] ?? '',
-  //       password: data['Password'] ?? ''
-  //   );
-  // }
-
-  // factory UserModel.fromSnapshot(DocumentSnapshot<dynamic> document) {
-  //   final data = document.data() as Map<String, dynamic>;
-  //   return UserModel(
-  //     id: document.id,
-  //     firstName: data['firstName'] ?? '',
-  //     lastName: data['lastName'] ?? '',
-  //     phoneNumber: data['phoneNumber'] ?? '',
-  //     dob: data['dob'] ?? '',
-  //     gender: data['gender'] ?? '',
-  //     email: data['email'] ?? '',
-  //     userName: data['username'] ?? '',
-  //     password: data['password'] ?? '',
-  //   );
-  // }
 
   factory UserModel.fromSnapshot(DocumentSnapshot document) {
     final Map<String, dynamic>? data = document.data() as Map<String, dynamic>?;

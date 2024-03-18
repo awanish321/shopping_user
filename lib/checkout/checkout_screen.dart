@@ -1,14 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:gap/gap.dart';
+import 'package:lottie/lottie.dart';
+import 'package:shopping_app/address/add_new_address.dart';
 import '../address/widgets/single_address.dart';
+import '../orders/orders_screen.dart';
 import '../product_detail/products.dart';
 import 'package:intl/intl.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final SelectedProductDetails selectedProduct;
-  const CheckoutScreen({super.key, required this.selectedProduct});
+  const CheckoutScreen({super.key, required this.selectedProduct,});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -19,20 +23,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   List<String> stepTitles = ['Order Summary', 'Address', 'Payment'];
   late String selectedAddressId;
   static const double deliveryCharge = 50.00;
+  late Razorpay _razorpay;
+  int type = 1;
 
   String calculateDiscountPrice() {
     double originalPrice = double.parse(widget.selectedProduct.productPrice.replaceAll(',', ''));
     double discountedPrice = double.parse(widget.selectedProduct.salePrice.replaceAll(',', ''));
     double discount = originalPrice - discountedPrice;
     return NumberFormat('#,###.00').format(discount.floor());
-    // return NumberFormat.simpleCurrency(locale: 'hi-IN').format(discount);
-
   }
 
   String calculateTotalAmount() {
     double salePrice = double.parse(widget.selectedProduct.salePrice.replaceAll(',', ''));
-    double totalAmount = salePrice  + deliveryCharge;
-    // return NumberFormat('#,####.00#').format(totalAmount.floor());
+    double totalAmount = (salePrice*widget.selectedProduct.quantity) + deliveryCharge;
     return NumberFormat.simpleCurrency(locale: 'hi-IN').format(totalAmount);
   }
 
@@ -40,15 +43,90 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     selectedAddressId = '';
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
-  continueStep() {
-    if (currentStep < 2) {
+
+  @override
+  void dispose() {
+    super.dispose();
+    _razorpay.clear();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    createOrder();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Payment Successful. Order placed.")),
+    );
+
+    // Navigate to the orders screen after payment success
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const OrdersScreen(),
+      ),
+    );
+  }
+
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Payment Failed. Please try again.")),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    // Handle external wallet response if needed
+  }
+
+  Future<void> createOrder() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final orderId = FirebaseFirestore.instance.collection('Orders').doc(FirebaseAuth.instance.currentUser!.email);
+    // Get the selected address details from FireStore
+    DocumentSnapshot addressSnapshot = await FirebaseFirestore.instance.collection('Addresses').doc(user!.email).collection('addresses').doc(selectedAddressId).get();
+    final addressData = addressSnapshot.data() as Map<String, dynamic>;
+
+    await FirebaseFirestore.instance.collection('Orders').doc(FirebaseAuth.instance.currentUser!.email).collection("orders").add({
+      'orderId': orderId,
+      'userId': user.uid,
+      'userEmail': user.email,
+      'productName': widget.selectedProduct.productName,
+      'productPrice': widget.selectedProduct.productPrice,
+      'salePrice': widget.selectedProduct.salePrice,
+      'quantity': widget.selectedProduct.quantity,
+      'color': widget.selectedProduct.selectedColor,
+      'imageUrl': widget.selectedProduct.imageUrl,
+      'paymentMethod': 'Razorpay',
+      'deliveryAddress': addressData, // Include selected address data
+      'totalAmount': calculateTotalAmount(),
+      'orderDate': DateTime.now(),
+    });
+  }
+
+  void continueStep() {
+    if (currentStep == 1) {
+      // Check if an address is selected
+      if (selectedAddressId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please select an address first.")),
+        );
+      } else {
+        // Proceed to the next step if an address is selected
+        setState(() {
+          currentStep++;
+        });
+      }
+    } else if (currentStep < 2) {
       setState(() {
-        currentStep = currentStep + 1;
+        currentStep++;
       });
+    } else {
+      initiatePayment();
     }
   }
+
 
   cancelStep() {
     if (currentStep > 0) {
@@ -59,9 +137,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   onStepTapped(int value) {
-    setState(() {
-      currentStep = value;
-    });
+    if (value == 2 && selectedAddressId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please select an address first.")),
+      );
+    } else {
+      setState(() {
+        currentStep = value;
+      });
+    }
   }
 
   void setSelectedAddressId(String addressId) {
@@ -70,63 +154,98 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
   }
 
+  void handleRadio(Object? e) => setState(() {
+    type = e as int;
+  });
+
   Widget controlBuilders(context, details) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // SizedBox(
-          //   width: 150,
-          //   child: OutlinedButton(
-          //     onPressed: details.onStepCancel,
-          //     child: Text('Back',
-          //         style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold)),
-          //   ),
-          // ),
-          SizedBox(
-            height: 45,
-            width: 150,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-              onPressed: details.onStepCancel,
-              child: Text(
-                'Back',
-                style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, color: Colors.white),
+          if (details.onStepCancel != null && currentStep > 0) // Render back button if onStepCancel is available and current step is not the first step
+            SizedBox(
+              height: 45,
+              width: 150,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+                onPressed: details.onStepCancel,
+                child: const Text(
+                  'Back',
+                  style: TextStyle( fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 20),
-          SizedBox(
-            height: 45,
-            width: 150,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
-              onPressed: details.onStepContinue,
-              child: Text(
-                'Continue',
-                style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold, color: Colors.white),
+          if (details.onStepContinue != null && currentStep < 2) // Render continue button if onStepContinue is available and current step is not the last step
+            const SizedBox(width: 20),
+          if (currentStep < 2) // Render continue button only if current step is not the last step (payment step)
+            SizedBox(
+              height: 45,
+              width: 150,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.deepOrange),
+                onPressed: details.onStepContinue,
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  int type = 1;
-  void handleRadio(Object? e) => setState(() {
-        type = e as int;
-      });
+
+
+  void initiatePayment() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final userEmail = user?.email ?? '';
+    final userPhone = user?.phoneNumber ?? '';
+
+    final totalAmount = calculateTotalAmount().replaceAll('₹', '').replaceAll(',', '').trim(); // Remove commas from totalAmount
+    final double totalAmountDouble = double.parse(totalAmount);
+    final int totalAmountInPaise = (totalAmountDouble * 100).round();
+
+    var options = {
+      'key': 'rzp_test_vDbr0036XsVs1D', // Replace with your Razorpay key ID
+      'amount': totalAmountInPaise,
+      'name': 'AMart',
+      'description': 'Payment for the order',
+      'prefill': {
+        'contact': userPhone, // User's phone number
+        'email': userEmail, // User's email
+      },
+      'external': {
+        'wallets': ['paytm']
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint('Error: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    bool showFAB = currentStep == 1;
 
     return Scaffold(
+      floatingActionButton: showFAB ? FloatingActionButton(
+        backgroundColor: Colors.deepOrange,
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => const AddNewAddressScreen()));
+        },
+        child: const Text("Add Address", textAlign: TextAlign.center, style: TextStyle(fontSize: 12),),
+      ) : null,
       appBar: AppBar(
         title: Text(stepTitles[currentStep],
-            style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold)),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Stepper(
         controlsBuilder: controlBuilders,
@@ -137,34 +256,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         onStepCancel: cancelStep,
         currentStep: currentStep,
         connectorColor: MaterialStateProperty.resolveWith<Color>(
-          (Set<MaterialState> states) {
+              (Set<MaterialState> states) {
             if (states.contains(MaterialState.pressed)) {
-              return Colors.deepOrange; // Color when pressed
+              return Colors.deepOrange;
             }
-            return Colors.deepOrange; // Default color
+            return Colors.deepOrange;
           },
         ),
         steps: [
           Step(
-            title: Text('Order', style: GoogleFonts.nunitoSans()),
+            title: const Text('Order',),
             content: Column(
-              // mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: double.infinity,
                   height: 180,
                   decoration: BoxDecoration(
-                    // color: Colors.white,
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(
                       color: Colors.grey,
-                      // width: 2.0,
                     ),
                   ),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 5),
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -172,28 +287,59 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           height: 85,
                           width: 85,
                           decoration: BoxDecoration(
-                              // color: Colors.grey.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(15)),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
                           child: Center(
-                              child: Image.network(
-                                widget.selectedProduct.imageUrl,
-                                height: 90,
-                                width: 90,
-                                fit: BoxFit.contain,
-                              ),
+                            child: Image.network(
+                              widget.selectedProduct.imageUrl,
+                              height: 90,
+                              width: 90,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         ),
-                        // const SizedBox(width: 15,),
+                        const Gap(20),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: Text(widget.selectedProduct.productName, style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold,) ,overflow: TextOverflow.ellipsis,)),
-                              Expanded(child: Text('Color : ${widget.selectedProduct.selectedColor}', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500),)),
-                              Expanded(child: Text('Product Price : ₹${widget.selectedProduct.productPrice}', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500),)),
-                              Expanded(child: Text('Sale Price : ₹${widget.selectedProduct.salePrice}', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500),)),
-                              Expanded(child: Text('Offer : ${widget.selectedProduct.offPercentage.floor()}% Off', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.deepOrange),)),
-                              Expanded(child: Text('Quantity : ${widget.selectedProduct.quantity}', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500),)),
+                              Expanded(
+                                child: Text(
+                                  widget.selectedProduct.productName,
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Color : ${widget.selectedProduct.selectedColor}',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Product Price : ₹${widget.selectedProduct.productPrice}',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Sale Price : ₹${widget.selectedProduct.salePrice}',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Offer : ${widget.selectedProduct.offPercentage.floor()}% Off',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.deepOrange),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'Quantity : ${widget.selectedProduct.quantity}',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                              ),
                             ],
                           ),
                         )
@@ -201,64 +347,81 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 20,
+                const SizedBox(height: 20),
+                const Text(
+                  'Price Details',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange),
                 ),
-                Text('Price Details', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepOrange),),
-                const Divider(thickness: 1,),
-                const SizedBox(height: 5,),
+                const Divider(thickness: 1),
+                const SizedBox(height: 5),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Sale Price :', style: GoogleFonts.nunitoSans(fontSize: 15, ),),
-                    Text('₹${widget.selectedProduct.salePrice}', style: GoogleFonts.nunitoSans(fontSize: 15, ),),
-                  ],
-                ),
-                const SizedBox(height: 5,),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Discount :', style: GoogleFonts.nunitoSans(fontSize: 15,),),
+                    const Text(
+                      'Sale Price :',
+                      style: TextStyle(fontSize: 18),
+                    ),
                     Text(
-                      '₹${calculateDiscountPrice()}',
-                      style: GoogleFonts.nunitoSans(fontSize: 15.0,),
+                      '₹${widget.selectedProduct.salePrice}',
+                      style: const TextStyle(fontSize: 18),
                     ),
                   ],
                 ),
-                const SizedBox(height: 5,),
+                const SizedBox(height: 5),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Delivery Charges :', style: GoogleFonts.nunitoSans(fontSize: 15,),),
-                    Text('₹$deliveryCharge', style: GoogleFonts.nunitoSans(fontSize: 15, ),),
+                    const Text(
+                      'Discount :',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    Text(
+                      '₹${calculateDiscountPrice()}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 5,),
-                const Divider(thickness: 1,),
+                const SizedBox(height: 5),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Delivery Charges :',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    Text(
+                      '₹$deliveryCharge',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                const Divider(thickness: 1),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total Amount :', style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepOrange),),
-                    Text(calculateTotalAmount(), style: GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.deepOrange),),
+                    const Text(
+                      'Total Amount :',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                    ),
+                    Text(
+                      calculateTotalAmount(),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                    ),
                   ],
                 ),
-                const Divider(thickness: 1,),
-                const SizedBox(height: 10,),
+                const Divider(thickness: 1),
+                const SizedBox(height: 10),
               ],
             ),
             isActive: currentStep >= 0,
             state: currentStep >= 0 ? StepState.complete : StepState.disabled,
           ),
           Step(
-            title: Text('Address', style: GoogleFonts.nunitoSans()),
+            title: const Text('Address', style: TextStyle()),
             content: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance.collection('Addresses').doc(user!.email).collection('addresses').snapshots(),
               builder: (context, snapshot) {
-                // if (snapshot.connectionState == ConnectionState.waiting) {
-                //   return const Center(
-                //       child: SizedBox(),
-                //       );
-                // }
                 if (snapshot.hasError) {
                   return Center(
                     child: Text('Error: ${snapshot.error}'),
@@ -268,23 +431,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   final addresses = snapshot.data!.docs;
                   if (addresses.isEmpty) {
                     return Center(
-                      child: Text('No addresses found.', style: GoogleFonts.nunitoSans(),),
+                      child: Lottie.asset("assets/empty_address.json")
                     );
                   }
-                  return Column(
-                    children: addresses.map<Widget>((address) {
-                      final data = address.data() as Map<String, dynamic>;
-                      final addressId = address.id;
-                      return RadioListTile<String>(
-                        title: TSingleAddress(addressData: data),
-                        value: addressId,
-                        groupValue: selectedAddressId,
-                        activeColor: Colors.redAccent,
-                        onChanged: (value) {
-                          setSelectedAddressId(value!);
-                        },
-                      );
-                    }).toList(),
+                  return Stack(
+                    fit: StackFit.passthrough,
+                    children: [
+                      Column(
+                        children: addresses.map<Widget>((address) {
+                          final data = address.data() as Map<String, dynamic>;
+                          final addressId = address.id;
+                          return RadioListTile<String>(
+                            title: TSingleAddress(addressData: data),
+                            value: addressId,
+                            groupValue: selectedAddressId,
+                            activeColor: Colors.redAccent,
+                            onChanged: (value) {
+                              setSelectedAddressId(value!);
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ]
                   );
                 }
                 return const SizedBox.shrink();
@@ -294,190 +462,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             state: currentStep >= 1 ? StepState.complete : StepState.disabled,
           ),
           Step(
-            title: Text('Payment', style: GoogleFonts.nunitoSans()),
+            title: const Text('Payment', style: TextStyle()),
             content: Column(
               children: [
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                      border: type == 1
-                          ? Border.all(width: 1, color: Colors.redAccent)
-                          : Border.all(width: 1, color: Colors.grey),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.transparent),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Radio(
-                                value: 1,
-                                groupValue: type,
-                                onChanged: handleRadio,
-                                activeColor: Colors.redAccent,
-                              ),
-                              Text(
-                                'Amazon Pay',
-                                style: type == 1
-                                    ? GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.redAccent)
-                                    : GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          Image.asset('assets/images/ap.jpeg', width: 70, height: 70, fit: BoxFit.cover, )
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20,),
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                      border: type == 2
-                          ? Border.all(width: 1, color: Colors.redAccent)
-                          : Border.all(width: 1, color: Colors.grey),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.transparent),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Radio(
-                                value: 2,
-                                groupValue: type,
-                                onChanged: handleRadio,
-                                activeColor: Colors.redAccent,
-                              ),
-                              Text(
-                                'Googal Pay',
-                                style: type == 2
-                                    ? GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.redAccent)
-                                    : GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          Image.asset('assets/icons/google-pay.png', height: 50, width: 50, fit: BoxFit.contain, )
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20,),
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                      border: type == 3
-                          ? Border.all(width: 1, color: Colors.redAccent)
-                          : Border.all(width: 1, color: Colors.grey),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.transparent),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Radio(
-                                value: 3,
-                                groupValue: type,
-                                onChanged: handleRadio,
-                                activeColor: Colors.redAccent,
-                              ),
-                              Text(
-                                'Paytm',
-                                style: type == 3
-                                    ? GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.redAccent)
-                                    : GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          Image.asset('assets/paytm.png', height: 50, width: 50, fit: BoxFit.contain, )
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20,),
-                Container(
-                  height: 60,
-                  decoration: BoxDecoration(
-                      border: type == 4
-                          ? Border.all(width: 1, color: Colors.redAccent)
-                          : Border.all(width: 1, color: Colors.grey),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.transparent),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Radio(
-                                value: 4,
-                                groupValue: type,
-                                onChanged: handleRadio,
-                                activeColor: Colors.redAccent,
-                              ),
-                              Text(
-                                'Credit Card',
-                                style: type == 4
-                                    ? GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.redAccent)
-                                    : GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          Image.asset('assets/credit-card.png', height: 40, width: 40, fit: BoxFit.contain, )
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20,),
-                Container(
-                  width: double.infinity,
-                  height: 60,
-                  decoration: BoxDecoration(
-                      border: type == 5
-                          ? Border.all(width: 1, color: Colors.redAccent)
-                          : Border.all(width: 1, color: Colors.grey),
-                      borderRadius: BorderRadius.circular(15),
-                      color: Colors.transparent),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Radio(
-                          value: 5,
-                          groupValue: type,
-                          onChanged: handleRadio,
-                          activeColor: Colors.redAccent,
-                        ),
-                        Text(
-                          'Cash on Delivery',
-                          style: type == 5
-                              ? GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.redAccent)
-                              : GoogleFonts.nunitoSans(fontSize: 15, fontWeight: FontWeight.w500, color: Colors.grey),
-                        ),
-
-                      ],
-                    ),
-                  ),
+                ElevatedButton(
+                  onPressed: () {
+                    initiatePayment();
+                  },
+                  child: const Text('Pay with Razorpay'),
                 ),
               ],
             ),

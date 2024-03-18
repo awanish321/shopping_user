@@ -8,12 +8,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:857283437645:android:0d57ec5367a7ab9b026804",
+        "mobilesdk_app_id": "1:857283437645:android:d9a766c90afe957f026804",
         "android_client_info": {
-          "package_name": "com.example.e_commerce"
+          "package_name": "com.example.admin"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "857283437645-13q9roaivcskq0ajbg1m7p8a72jqb27a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.admin",
+            "certificate_hash": "922aeceba126d32c7c979e8a95bbcaed8b73a556"
+          }
+        },
+        {
+          "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBryd9StEmoW-gYI6XOE1U0WxAw-kRDlWA"
@@ -21,7 +34,91 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "857283437645-0nm10gmuhbniqlrneqd3iqgohbebif86.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shoppingApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:857283437645:android:717f3d52ba7016ce026804",
+        "android_client_info": {
+          "package_name": "com.example.bloc_user_auth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBryd9StEmoW-gYI6XOE1U0WxAw-kRDlWA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "857283437645-0nm10gmuhbniqlrneqd3iqgohbebif86.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shoppingApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:857283437645:android:0d57ec5367a7ab9b026804",
+        "android_client_info": {
+          "package_name": "com.example.e_commerce"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBryd9StEmoW-gYI6XOE1U0WxAw-kRDlWA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "857283437645-0nm10gmuhbniqlrneqd3iqgohbebif86.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shoppingApp"
+              }
+            }
+          ]
         }
       }
     },
@@ -32,7 +129,12 @@
           "package_name": "com.example.shopping_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBryd9StEmoW-gYI6XOE1U0WxAw-kRDlWA"
@@ -40,7 +142,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "857283437645-8tu1fn5p4i1d2u16sr019c0q21i0qroj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "857283437645-0nm10gmuhbniqlrneqd3iqgohbebif86.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.shoppingApp"
+              }
+            }
+          ]
         }
       }
     }

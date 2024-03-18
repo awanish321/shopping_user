@@ -27,10 +27,10 @@ class IconBtnWithCounter extends StatelessWidget {
             height: 46,
             width: 46,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.2),
+              color: Colors.grey.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: SvgPicture.asset(svgSrc, color: Colors.black,),
+            child: SvgPicture.asset(svgSrc),
           ),
           if (numOfitem != 0)
             Positioned(
@@ -40,7 +40,7 @@ class IconBtnWithCounter extends StatelessWidget {
                 height: 20,
                 width: 20,
                 decoration: const BoxDecoration(
-                  color: Color(0xFFFF4848),
+                  // color: Colors.white,
                   shape: BoxShape.circle,
                   // border: Border.all(width: 1, color: Colors.white),
                 ),
@@ -51,7 +51,7 @@ class IconBtnWithCounter extends StatelessWidget {
                       fontSize: 12,
                       height: 1,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      // color: Colors.white,
                     ),
                   ),
                 ),

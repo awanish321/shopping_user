@@ -4,12 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:iconsax/iconsax.dart';
+import 'package:gap/gap.dart';
 import 'package:intl/intl.dart';
 import 'package:readmore/readmore.dart';
 import 'package:shopping_app/checkout/checkout_screen.dart';
-import '../address/address.dart';
 import '../models/p_products.dart';
 
 
@@ -21,7 +19,8 @@ class SelectedProductDetails {
   final int quantity;
   final String selectedColor;
   final String selectedSize;
-  final String imageUrl; // New field for image URL
+  final String imageUrl;
+  final Timestamp deliveryDate;
 
   SelectedProductDetails({
     required this.productName,
@@ -31,7 +30,8 @@ class SelectedProductDetails {
     required this.quantity,
     required this.selectedColor,
     required this.selectedSize,
-    required this.imageUrl, // Include image URL in constructor
+    required this.imageUrl,
+    required this.deliveryDate
   });
 }
 
@@ -59,8 +59,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     // Select the first color if available
     String selectedColor = _selectedColors.isNotEmpty ? _selectedColors.first : '';
     if (_selectedColors.isEmpty && product.colors.isNotEmpty) {
-      selectedColor = product.colors.first; // Select the first color from the product colors
-      _selectedColors.add(selectedColor); // Add selected color to the list
+      selectedColor = product.colors.first;
+      _selectedColors.add(selectedColor);
     }
 
     // Get selected size
@@ -126,6 +126,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
 
+  Future<void> showCustomSnackBar(BuildContext context, String message) async {
+    final snackBar = SnackBar(
+      elevation: 0,
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: Colors.transparent,
+      content: AwesomeSnackbarContent(
+        message: message,
+        contentType: ContentType.success, title: 'Success',
+      ),
+    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(snackBar);
+  }
+
   Future<void> addToFavourite(BuildContext context) async {
     final FirebaseAuth auth = FirebaseAuth.instance;
     var currentUser = auth.currentUser;
@@ -135,8 +150,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     var product = widget.product;
 
     // Get the first image
-    String firstImage =
-    product.images.isNotEmpty ? product.images.first : '';
+    String firstImage = product.images.isNotEmpty ? product.images.first : '';
 
     // Build the cart item data
     Map<String, dynamic> favouriteItemData = {
@@ -146,41 +160,47 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       'productPrice': product.productPrice,
     };
 
-    // Toggle the _isFavorite variable
-    setState(() {
-      _isFavorite = !_isFavorite;
-    });
+    // Check if the product is already in the wishlist
+    bool isAlreadyInWishlist = await collectionRef
+        .doc(currentUser!.email)
+        .collection('items')
+        .where('productName', isEqualTo: product.productName)
+        .get()
+        .then((snapshot) => snapshot.docs.isNotEmpty);
 
-    // Check if all necessary fields are present
-    if (firstImage.isNotEmpty) {
-      // Add the cart item to the user's cart collection
-      collectionRef
-          .doc(currentUser!.email)
+    if (!isAlreadyInWishlist) {
+      // Add to wishlist
+      await collectionRef
+          .doc(currentUser.email)
           .collection('items')
           .add(favouriteItemData)
           .then((value) {
         // Show snack-bar when item is added to wishlist
-        final snackBar = SnackBar(
+        showCustomSnackBar(context, '${widget.product.productName} added to the Wishlist.');
+      }).catchError((error) => print('Error adding to wishlist: $error'));
+    } else {
+      // Remove from wishlist
+      await collectionRef
+          .doc(currentUser.email)
+          .collection('items')
+          .where('productName', isEqualTo: product.productName)
+          .get()
+          .then((snapshot) {
+        for (DocumentSnapshot doc in snapshot.docs) {
+          doc.reference.delete();
+        }
+        // Show snackbar when item is removed from wishlist
+        showCustomSnackBar(context, '${widget.product.productName} removed from the Wishlist.');
+      }).catchError((error) => debugPrint('Error removing from wishlist: $error'));
+    }
+  }
 
-          /// need to set following properties for best effect of awesome_snackbar_content
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Congratulations',
-            message: ('${widget.product.productName} Added to the Wishlist.'),
-
-            /// change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
-            contentType: ContentType.success,
-
-          ),
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(snackBar);
-      })
-          .catchError((error) =>
-          debugPrint('Error adding to wishlist: $error'));
+  int calculateDeliveryCharge() {
+    double productPrice = double.parse(widget.product.salePrice.replaceAll(',', ''));
+    if (productPrice >= 500) {
+      return 50;
+    } else {
+      return 0;
     }
   }
 
@@ -190,6 +210,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
       final SelectedProductDetails selectedProduct = SelectedProductDetails(
         productName: widget.product.productName,
+        deliveryDate: widget.product.deliveryDate,
         salePrice: widget.product.salePrice,
         productPrice: widget.product.productPrice,
         offPercentage: calculateOfferPercentage().floorToDouble(),
@@ -211,14 +232,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Error', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),),
-            content: Text('Please select color before proceeding.', style: GoogleFonts.nunitoSans(fontSize: 15),),
+            title: const Text('Error', style: TextStyle(fontWeight: FontWeight.bold),),
+            content: const Text('Please select color before proceeding.', style: TextStyle(fontSize: 15),),
             actions: <Widget>[
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text('OK', style: GoogleFonts.nunitoSans(fontWeight: FontWeight.bold),),
+                child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold),),
               ),
             ],
           );
@@ -227,14 +248,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
   }
 
-
-
-
   final PageController _pageController = PageController();
   int _currentPage = 0;
   final Set<String> _selectedColors = {};
   final Set<String> _selectedSizes = {};
-  late bool _isFavorite = false;
 
   @override
   void initState() {
@@ -289,8 +306,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // backgroundColor: const Color(0xFF84FFF).withOpacity(0.5),
-        // backgroundColor: Color(0xFFE53935).withOpacity(0.7),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -300,12 +315,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         title: TextField(
           decoration: InputDecoration(
             hintText: 'Search...',
-            hintStyle: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
             border: InputBorder.none,
-            prefixIcon: const Icon(Iconsax.search_normal_1, size: 20,),
+            prefixIcon: const Icon(Icons.search, size: 20,),
             contentPadding: const EdgeInsets.all(8.0),
             filled: true,
-            fillColor: Colors.white,
             focusedBorder: OutlineInputBorder(
               borderSide: const BorderSide(color: Colors.blue),
               borderRadius: BorderRadius.circular(8.0),
@@ -319,14 +332,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
               Text(
                 widget.product.productName,
-                  style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
               ),
               const SizedBox(height: 5),
               const Divider(thickness: 1),
@@ -336,7 +349,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 child: Stack(
                   alignment: Alignment.bottomCenter,
                   children: [
-                    // Separate Stack for PageView, Favorite icon, and Share button
                     Stack(
                       alignment: Alignment.topRight,
                       children: [
@@ -344,14 +356,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           controller: _pageController,
                           itemCount: widget.product.images.length,
                           itemBuilder: (context, index) {
-                            return Image.network(
-                              widget.product.images[index],
-                              fit: BoxFit.contain,
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.network(
+                                widget.product.images[index],
+                                fit: BoxFit.contain,
+                              ),
                             );
                           },
                         ),
 
-                        // Display offer percentage on the top left of the image
                         Positioned(
                           top: 10,
                           left: 10,
@@ -368,18 +382,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                                   offset: const Offset(0, 3),
                                 ),
                               ],
-                              color: const Color(0xFFB71C1C),
+                              color: Colors.deepOrangeAccent,
                               borderRadius: BorderRadius.circular(100),
                             ),
                             child: Center(
                               child: Text(
                                 ' ${calculateOfferPercentage().toStringAsFixed(0)}%   \n Off',
-                                  style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white))
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white)
                               ),
                             ),
                           ),
                         ),
-
 
                         // Positioned for Favorite icon
                         StreamBuilder(
@@ -389,40 +402,39 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                               return const Text('');
                             }
 
+                            bool isFavorite = snapshot.data.docs.isNotEmpty;
+
                             return Positioned(
                               top: 10.0,
                               right: 10.0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.grey.withOpacity(0.5),
-                                      spreadRadius: 2,
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: IconButton(
-                                  icon: snapshot.data.docs.length==0? const Icon(
-                                    Icons.favorite_border,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ) : const Icon(
-                                    Icons.favorite,
-                                    color: Colors.red,
-                                    size: 20,
+                              child: GestureDetector(
+                                onTap: () => addToFavourite(context),
+                                child: Container(
+                                  height: 50,
+                                  width: 50,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.5),
+                                        spreadRadius: 2,
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  onPressed: () => snapshot.data.docs.length==0?addToFavourite(context) : debugPrint('Already Added'),
+                                  child: Icon(
+                                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                                    color: isFavorite ? Colors.deepOrangeAccent : Colors.red,
+                                    size: 25,
+                                  ),
                                 ),
                               ),
                             );
                           },
-
                         ),
-                        // Positioned for Share button
+
                         Positioned(
                           bottom: 10.0,
                           left: 10.0,
@@ -442,7 +454,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             child: IconButton(
                               icon: const Icon(
                                 Icons.share,
-                                color: Colors.red,
+                                color: Colors.deepOrangeAccent,
                                 size: 25,
                               ),
                               onPressed: () {
@@ -470,9 +482,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   trimMode: TrimMode.Line,
                   trimCollapsedText: 'Show More',
                   trimExpandedText: '...Show Less',
-                    style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15,)),
-                  moreStyle: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.red)),
-                  lessStyle: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.red))
+                    style: const TextStyle(fontSize: 15,),
+                  moreStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                  lessStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red)
                 ),
               ),
               const SizedBox(height: 5,),
@@ -483,9 +495,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Colors',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                   const SizedBox(height: 15,),
                   Wrap(
@@ -515,12 +527,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                           ),
                           child: Text(
                             color,
-                              style: GoogleFonts.nunitoSans(textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
                                 color: isSelected ? Colors.white : Colors.black
 
                               ))
                           ),
-                        ),
                       );
                     }),
                   ),
@@ -534,9 +545,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (widget.product.sizes.isNotEmpty) ...[
-                    Text(
+                    const Text(
                       'Sizes',
-                        style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                     ),
                     const SizedBox(height: 15,),
                     Wrap(
@@ -570,11 +581,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             ),
                             child: Text(
                               size,
-                                style: GoogleFonts.nunitoSans(textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold,
                                 color: isSelected ? Colors.white : Colors.black
                                 ))
                             ),
-                          ),
                         );
                       }),
                     ),
@@ -584,21 +594,20 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               ),
 
               const SizedBox(height: 15,),
-              Text('Sale Price : ₹${widget.product.salePrice}', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+              Text('Sale Price : ₹${widget.product.salePrice}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Text('M.R.P. : ', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red))),
-                  Text('₹${widget.product.productPrice}', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold,
+                  const Text('M.R.P. : ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red)),
+                  Text('₹${widget.product.productPrice}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
                   color: Colors.red,
                     decoration: TextDecoration.lineThrough,
                     decorationColor: Colors.red,
                     decorationThickness: 2
                   ))
-                  ),
                 ],
               ),
-              Text('Inclusive of all Taxes', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15))),
+              const Text('Inclusive of all Taxes', style: TextStyle(fontSize: 14)),
               const SizedBox(height: 5,),
               const Divider(thickness: 1),
 
@@ -606,52 +615,31 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
               Row(
                 children: [
-                  Text(
+                  const Text(
                       'Delivery - ',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey))
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)
                   ),
                   Text(
                       DateFormat('dd MMMM yyyy').format(widget.product.deliveryDate.toDate()),
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                 ],
               ),
 
+              const Gap(12),
               Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.location_on_rounded),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserAddressScreen(),
-                        ),
-                      );
-                    },
-                    iconSize: 20,
-                  ),
-                  const SizedBox(height: 5.0),
-                  Text(
-                      'Dholka Ahmedabad, Gujarat 382225',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
-                  ),
-                ],
-              ),
-
-              Row(
-                children: [
-                  Text(
+                  const Text(
                       'Delivery Charge : ',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                   Text(
-                      '₹125',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    '₹${calculateDeliveryCharge()}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
-
               const SizedBox(height: 10),
 
               Row(
@@ -672,7 +660,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   // const SizedBox(width: 15),
                   Text(
                     '$_counter',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold))
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                   // const SizedBox(width: 15),
                   ElevatedButton(
@@ -701,7 +689,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     backgroundColor: Colors.yellow
                   ),
                   onPressed: () => addToCart(context),
-                  child: Text('ADD TO CART', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white))),
+                  child: const Text('ADD TO CART', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -713,7 +701,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                       backgroundColor: Colors.deepOrangeAccent
                   ),
                   onPressed: () { _buyNow();  },
-                  child: Text('BUY NOW', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white))
+                  child: const Text('BUY NOW', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
                   ),
                 ),
               ),
@@ -729,21 +717,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 8.0),
-                  Text(
+                  const Text(
                     'Secure Transaction',
-                      style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey))
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)
                   ),
                 ],
               ),
 
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('Sold by ', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),),
-                  Text('EMart ', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey)),),
-                  Text('and ', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),),
-                  Text('Fulfilled by EMart ', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey)),),
+                  Text('Sold by ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
+                  Text('EMart ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),),
+                  Text('and ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
+                  Text('Fulfilled by EMart ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),),
                 ],
               ),
 

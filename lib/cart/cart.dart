@@ -1,16 +1,13 @@
-import 'package:flutter/cupertino.dart';
-import 'package:intl/intl.dart'; // Import the intl package
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:gap/gap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
-import 'package:shopping_app/cart/empty_cart.dart';
-import 'package:shopping_app/checkout/checkout_screen.dart';
-
+import 'package:intl/intl.dart';
 import '../product_detail/products.dart';
+import 'empty_cart.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({Key? key}) : super(key: key);
@@ -21,86 +18,67 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   late final SelectedProductDetails selectedProduct;
-  double calculateTotal(List<DocumentSnapshot<Object?>> items) {
-    double total = 0.0;
+  final _indianCurrencyFormat = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
 
-    for (var item in items) {
-      double itemPrice = 0.0;
-      try {
-        itemPrice = double.parse(item['salePrice'].toString().replaceAll(',', ''));
-      } catch (e) {
-        if (kDebugMode) {
-          print('Error parsing salePrice: $e');
-        }
+  double calculateTotal(DocumentSnapshot<Object?> item) {
+    double itemPrice = 0.0;
+    try {
+      itemPrice = double.parse(item['salePrice'].toString().replaceAll(',', ''));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error parsing salePrice: $e');
       }
-      total += itemPrice * (item['quantity'] ?? 1);
     }
-    return total;
+
+    // Calculate the increased price based on quantity
+    double increasedPrice = itemPrice * (item['quantity'] ?? 1);
+    return increasedPrice;
   }
 
   void _incrementCounterForItem(DocumentSnapshot<Object?> item) {
-    setState(() {
-      int currentQuantity = item['quantity'] ?? 1;
-      currentQuantity++;
-      FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).update({
-        'quantity': currentQuantity,
-      });
-    });
-  }
-
-  // void _decrementCounterForItem(DocumentSnapshot<Object?> item) {
-  //   setState(() {
-  //     int currentQuantity = item['quantity'] ?? 1;
-  //     if (currentQuantity > 1) {
-  //       currentQuantity--;
-  //       FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).update({
-  //         'quantity': currentQuantity,
-  //       });
-  //     }
-  //   });
-  // }
-  void _decrementCounterForItem(DocumentSnapshot<Object?> item) {
-    setState(() {
-      int currentQuantity = item['quantity'] ?? 1;
-      if (currentQuantity > 1) {
-        currentQuantity--;
+    if(mounted){
+      setState(() {
+        int currentQuantity = item['quantity'] ?? 1;
+        currentQuantity++;
         FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).update({
           'quantity': currentQuantity,
         });
-      } else {
-        // If the quantity is zero, delete the item from the cart
-        FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).delete();
-        // Show snackbar message
-        // AwesomeSnackBar(
-        //   context: context,
-        //   title: 'Removed from Cart',
-        //   body: Text('${item['productName']} removed from the cart.'),
-        //   type: AwesomeSnackBarType.success, // Use lowercase 'success'
-        //   margin: const EdgeInsets.all(8),
-        //   duration: const Duration(seconds: 3),
-        // )..show();
+      });
+    }
+  }
 
+  void _decrementCounterForItem(DocumentSnapshot<Object?> item) {
+    if(mounted){
+      setState(() {
+        int currentQuantity = item['quantity'] ?? 1;
+        if (currentQuantity > 1) {
+          currentQuantity--;
+          FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).update({
+            'quantity': currentQuantity,
+          });
+        } else {
+          // If the quantity is zero, delete the item from the cart
+          FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').doc(item.id).delete();
 
-        final snackBar = SnackBar(
-          /// need to set following properties for best effect of awesome_snackbar_content
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Congratulations',
-            message: ('${item['productName']} removed from the cart.'),
-            /// change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
-            contentType: ContentType.success,
+          final snackBar = SnackBar(
+            /// need to set following properties for best effect of awesome_snackbar_content
+            elevation: 0,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            content: AwesomeSnackbarContent(
+              title: 'Congratulations',
+              message: ('${item['productName']} removed from the cart.'),
+              /// change contentType to ContentType.success, ContentType.warning or ContentType.help for variants
+              contentType: ContentType.success,
 
-          ),
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(snackBar);
-
-
-      }
-    });
+            ),
+          );
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(snackBar);
+        }
+      });
+    }
   }
 
   late bool _isLoading;
@@ -109,9 +87,11 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     _isLoading = true;
     Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _isLoading = false;
-      });
+      if(mounted){
+        setState(() {
+          _isLoading = false;
+        });
+      }
     });
     super.initState();
   }
@@ -120,11 +100,11 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Cart', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontWeight: FontWeight.bold))),
-      ),
+        // backgroundColor: Colors.deepOrangeAccent,
+          title: const Text('Cart', style: TextStyle(fontWeight: FontWeight.bold))),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('Cart').doc(FirebaseAuth.instance.currentUser!.email).collection('items').snapshots(),
             builder: (context, snapshot) {
@@ -147,49 +127,34 @@ class _CartScreenState extends State<CartScreen> {
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    separatorBuilder: (context, index) => const Divider(height: 5, thickness: 1,),
+                    separatorBuilder: (context, index) => const Gap(16),
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       var item = items[index];
+                      double totalPrice = calculateTotal(item);
 
                       return Container(
                         width: double.infinity,
                         height: 182,
                         decoration: BoxDecoration(
-                          // color: Colors.white,
+                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
                           borderRadius: BorderRadius.circular(15),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.grey.withOpacity(0.5),
-                          //     spreadRadius: 3,
-                          //     blurRadius: 10,
-                          //     offset: const Offset(0, 3),
-                          //   ),
-                          // ],
                         ),
                         child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 15),
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
                             child: Stack(
                               children: [
                                 Positioned(
                                   bottom: 10.0,
                                   right: 10.0,
                                   child: Container(
-                                    decoration: BoxDecoration(
+                                    decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.white,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey.withOpacity(0.5),
-                                          spreadRadius: 2,
-                                          blurRadius: 5,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
+                                      color: Colors.grey,
                                     ),
                                     child: IconButton(
                                       icon: const Icon(
-                                        FontAwesomeIcons.remove,
+                                        Icons.delete_forever_rounded,
                                         color: Colors.black,
                                         size: 20,
                                       ),
@@ -200,7 +165,7 @@ class _CartScreenState extends State<CartScreen> {
                                   ),
                                 ),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.start,
                                     children: [
                                       Container(
                                         alignment: Alignment.center,
@@ -219,7 +184,7 @@ class _CartScreenState extends State<CartScreen> {
                                               child: Text(
                                                 item['productName'],
                                                 maxLines: 1 ,
-                                                style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis) ),
+                                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, overflow: TextOverflow.ellipsis),
                                               ),
                                             ),
                                             const SizedBox(height: 5),
@@ -227,20 +192,20 @@ class _CartScreenState extends State<CartScreen> {
                                               Flexible(
                                                 child: Text(
                                                   'Size: ${item['size']}',
-                                                  style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                                  style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
                                                 ),
                                               ),
                                             const SizedBox(height: 5),
                                             Flexible(
                                               child: Text(
                                                 'Color: ${item['color']}',
-                                                style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.bold)),
+                                                style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
                                               ),
                                             ),
                                             const SizedBox(height: 8),
                                             Text(
-                                              'Price: ₹${item['salePrice']}',
-                                              style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                              'Total Price: ${_indianCurrencyFormat.format(totalPrice)}', // Display formatted total price here
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                                             ),
                                             const SizedBox(height: 5,),
                                             Row(
@@ -261,7 +226,7 @@ class _CartScreenState extends State<CartScreen> {
                                                 ),
                                                 Text(
                                                     '${item['quantity']}',
-                                                    style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))
+                                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)
                                                 ),
                                                 ElevatedButton(
                                                   onPressed: () {
@@ -274,7 +239,7 @@ class _CartScreenState extends State<CartScreen> {
                                                   child: const Icon(
                                                     FontAwesomeIcons.plus,
                                                     color: Colors.white,
-                                                    size: 15,
+                                                    size: 12,
                                                   ),
                                                 ),
                                               ],
@@ -290,50 +255,6 @@ class _CartScreenState extends State<CartScreen> {
                       );
                     },
                   ),
-                  // const Divider(thickness: 1),
-                  // const SizedBox(height: 20),
-                  // // Display Delivery Charge
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  //   children: [
-                  //     Text('Delivery Charge', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //     Text('₹125', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //   ],
-                  // ),
-                  // const SizedBox(height: 10),
-                  // // Display Sub Total
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  //   children: [
-                  //     Text('Sub Total', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //     Text(NumberFormat.currency(locale: 'en_IN', decimalDigits: 2, symbol: '₹ ').format(calculateTotal(items)), style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //   ],
-                  // ),
-                  // const SizedBox(height: 10),
-                  // // Display Total
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  //   children: [
-                  //     Text('Total', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //     Text(NumberFormat.currency(locale: 'en_IN', decimalDigits: 2, symbol: '₹ ').format(calculateTotal(items) + 125), style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
-                  //   ],
-                  // ),
-                  // const SizedBox(height: 25),
-                  // SizedBox(
-                  //   height: 50,
-                  //   width: double.infinity,
-                  //   child: ElevatedButton(
-                  //     style: ElevatedButton.styleFrom(
-                  //       backgroundColor: const Color(0xFFE53935),
-                  //     ),
-                  //     onPressed: () {
-                  //       Navigator.push(context, MaterialPageRoute(builder: (context) => CheckoutScreen(selectedProduct: selectedProduct,)));
-                  //     },
-                  //     child: Text('CHECKOUT', style: GoogleFonts.nunitoSans(textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white))),
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 60),
-
                 ],
               );
             },
