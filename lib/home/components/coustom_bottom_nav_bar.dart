@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shopping_app/orders/orders.dart';
+import 'package:shopping_app/orders/orders_screen.dart';
 import 'package:shopping_app/wishlist/wishlist.dart';
 import 'package:shopping_app/home/home_screen.dart';
 import 'package:shopping_app/screens/profile/profile_screen.dart';
@@ -21,7 +22,7 @@ class _MyBottomNavBarState extends State<MyBottomNavBar> {
   _MyBottomNavBarState() {
     pages = [
       const HomeScreen(),
-      const EmptyOrderScreen(),
+      OrdersScreen(),
       const WishlistScreen(),
       const ProfileScreen(),
     ];
